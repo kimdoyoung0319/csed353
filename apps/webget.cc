@@ -6,7 +6,7 @@
 
 using namespace std;
 
-//! Connects to the specified path of the host, shows the output into stdout
+//! Connects to the specified path of the host, shows the output into stdout.
 void get_URL(const string &host, const string &path) {
     TCPSocket socket;
     Address addr(host, "http");
@@ -21,8 +21,6 @@ void get_URL(const string &host, const string &path) {
         cout << socket.read();
 
     socket.shutdown(SHUT_RDWR);
-
-    return;
 }
 
 int main(int argc, char *argv[]) {
