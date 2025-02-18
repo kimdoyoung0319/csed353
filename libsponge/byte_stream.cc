@@ -1,4 +1,5 @@
 // TODO: Add comments for methods.
+// TODO: Ask questions about what we should throw when we get invalid arguments on the constructor.
 #include "byte_stream.hh"
 
 #include <iterator>
@@ -9,12 +10,9 @@ void DUMMY_CODE(Targs &&.../* unused */) {}
 
 using namespace std;
 
-ByteStream::ByteStream(const size_t capacity) : _buf(capacity), _capacity(capacity) {
-    if (capacity < 0) {
-        throw runtime_error("invalid stream capacity:" + to_string(capacity));
-    }
-}
-
+//! \param[in] data is data to write on the stream
+//! \returns the number of bytes that are actually written
+//! \throws runtime_error when the stream is already been closed
 size_t ByteStream::write(const string &data) {
     if (_end)
         throw runtime_error("stream input has already been ended");
@@ -31,6 +29,7 @@ size_t ByteStream::write(const string &data) {
 }
 
 //! \param[in] len bytes will be copied from the output side of the buffer
+//! \returns the contents of the stream of the length len
 string ByteStream::peek_output(const size_t len) const {
     if (len > _buf.size()) {
         throw runtime_error("invalid peek length:" + to_string(len));
@@ -54,7 +53,7 @@ void ByteStream::pop_output(const size_t len) {
 
 //! Read (i.e., copy and then pop) the next "len" bytes of the stream
 //! \param[in] len bytes will be popped and returned
-//! \returns a string
+//! \returns a string that are actually read
 string ByteStream::read(const size_t len) {
     string result = peek_output(len);
     pop_output(len);

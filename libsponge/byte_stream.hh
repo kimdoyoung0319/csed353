@@ -22,7 +22,7 @@ class ByteStream {
 
   public:
     //! Construct a stream with room for `capacity` bytes.
-    ByteStream(const size_t capacity);
+    ByteStream(const size_t capacity) : _capacity(capacity), _buf() {}
 
     //! \name "Input" interface for the writer
     //!@{
