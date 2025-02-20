@@ -1,5 +1,3 @@
-// TODO: Add comments for methods.
-// TODO: Ask questions about what we should throw when we get invalid arguments on the constructor.
 #include "byte_stream.hh"
 
 #include <iterator>
