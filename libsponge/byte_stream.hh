@@ -1,8 +1,7 @@
 #ifndef SPONGE_LIBSPONGE_BYTE_STREAM_HH
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
-#include "byte.hh"
-
+#include <cstddef>
 #include <deque>
 #include <string>
 
@@ -13,12 +12,12 @@
 //! and then no more bytes can be written.
 class ByteStream {
   private:
-    size_t _remaining;        //! Remaining capacity of the buffer.
-    size_t _written = 0;      //! Total number of bytes written so far.
-    size_t _read = 0;         //! Total number of bytes read so far.
-    std::deque<byte_t> _buf;  //! Buffer to store written bytes in.
-    bool _error = false;      //!< Flag indicating that the stream suffered an error.
-    bool _end = false;        //!< Flag indicating that the stream has reached its ending.
+    size_t _remaining;           //! Remaining capacity of the buffer.
+    size_t _written = 0;         //! Total number of bytes written so far.
+    size_t _read = 0;            //! Total number of bytes read so far.
+    std::deque<std::byte> _buf;  //! Buffer to store written bytes in.
+    bool _error = false;         //!< Flag indicating that the stream suffered an error.
+    bool _end = false;           //!< Flag indicating that the stream has reached its ending.
 
   public:
     //! Construct a stream with room for `capacity` bytes.

@@ -1,5 +1,6 @@
 #include "byte_stream.hh"
 
+#include <algorithm>
 #include <iterator>
 #include <stdexcept>
 
@@ -19,7 +20,7 @@ size_t ByteStream::write(const string &data) {
     string::const_iterator it;
 
     for (it = data.begin(); it != data.end() && _remaining > 0; it++) {
-        _buf.push_back(*it);
+        _buf.push_back(static_cast<byte>(*it));
         _remaining--;
         _written++;
     }
@@ -30,11 +31,14 @@ size_t ByteStream::write(const string &data) {
 //! \param[in] len bytes will be copied from the output side of the buffer
 //! \returns the contents of the stream of the length len
 string ByteStream::peek_output(const size_t len) const {
+    string result;
+
     if (len > _buf.size()) {
         throw runtime_error("invalid peek length:" + to_string(len));
     }
 
-    return string(_buf.begin(), _buf.begin() + len);
+    transform(_buf.begin(), _buf.end(), back_inserter(result), [](byte x) { return to_integer<char>(x); });
+    return result;
 }
 
 //! \param[in] len bytes will be removed from the output side of the buffer
