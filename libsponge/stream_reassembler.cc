@@ -1,71 +1,69 @@
 #include "stream_reassembler.hh"
 
-// Dummy implementation of a stream reassembler.
-
-// For Lab 1, please replace with a real implementation that passes the
-// automated checks run by `make check_lab1`.
-
-// You will need to add private members to the class declaration in `stream_reassembler.hh`
-
-template <typename... Targs>
-void DUMMY_CODE(Targs &&.../* unused */) {}
-
 using namespace std;
 
+const uint64_t inf = UINT64_MAX;
+
 StreamReassembler::StreamReassembler(const size_t capacity)
-    : _buf(capacity), _output(capacity), _capacity(capacity), _unassembled(0), _eof(UINT64_MAX) {}
+    : _buf(capacity), _output(capacity), _capacity(capacity), _unassembled(0), _eof(inf) {}
 
 //! \details This function accepts a substring (aka a segment) of bytes,
 //! possibly out-of-order, from the logical stream, and assembles any newly
 //! contiguous substrings and writes them into the output stream in order.
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
-    std::string to_push;
-    size_t buf_index, data_index;
-    uint64_t stream_index;
-    byte_t ch;
-
     if (eof) {
         _eof = index + data.size();
     }
 
-    if (index > _output.bytes_written()) {
-        buf_index = index - _output.bytes_written();
-        data_index = 0;
-    } else {
-        buf_index = 0;
-        data_index = _output.bytes_written() - index;
-    }
+    copy_to_buffer(data, index);
+    push_to_stream();
+}
 
-    while (_output.buffer_size() + buf_index < _capacity && data_index < data.size()) {
-        if (!_buf[buf_index])
+// Auxiliary function that copys substring to the internal buffer, silently
+// dropping bytes in the substring that are not acceptible within the
+// capacity of the reassembler.
+void StreamReassembler::copy_to_buffer(const string &data, size_t index) {
+    size_t buf_index, data_index;
+    uint64_t stream_start = _output.bytes_read();
+    uint64_t stream_end = _output.bytes_written();
+
+    data_index = index > stream_end ? 0 : stream_end - index;
+    index = index > stream_end ? index : stream_end;
+
+    while (index - stream_start < _capacity && data_index < data.size()) {
+        buf_index = index % _capacity;
+
+        if (!_buf[buf_index].has_value())
             _unassembled++;
 
-        _buf[buf_index] = data[data_index];
+        _buf[buf_index] = static_cast<byte>(data[data_index]);
 
-        buf_index++;
+        index++;
         data_index++;
     }
+}
 
-    buf_index = 0;
-    stream_index = _output.bytes_written();
+// Auxiliary function that pushes the continuous prefix of the buffer into
+// the stream.
+void StreamReassembler::push_to_stream() {
+    string to_push;
+    uint64_t index = _output.bytes_written();
+    size_t buf_index = index % _capacity;
 
-    while (_buf[buf_index] && buf_index < _capacity && stream_index < _eof) {
-        ch = _buf[buf_index].value();
-        to_push.push_back(ch);
+    while (_buf[buf_index].has_value() && index < _eof) {
+        to_push.push_back(static_cast<char>(_buf[buf_index].value()));
+        _buf[buf_index] = nullopt;
 
+        index++;
+        buf_index = index % _capacity;
         _unassembled--;
-        buf_index++;
-        stream_index++;
     }
 
     if (!to_push.empty()) {
         _output.write(to_push);
     }
 
-    _buf.erase(_buf.begin(), _buf.begin() + to_push.size());
-    _buf.resize(_capacity);
-
-    if (stream_index >= _eof) {
+    if (index == _eof) {
         _output.end_input();
     }
 }

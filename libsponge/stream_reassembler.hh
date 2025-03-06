@@ -1,9 +1,9 @@
 #ifndef SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
 #define SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
 
-#include "byte.hh"
 #include "byte_stream.hh"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -13,11 +13,16 @@
 //! possibly overlapping) into an in-order byte stream.
 class StreamReassembler {
   private:
-    std::vector<std::optional<byte_t>> _buf;
-    ByteStream _output;  //!< The reassembled in-order byte stream
-    size_t _capacity;    //!< The capacity of the buffer
-    size_t _unassembled;
-    uint64_t _eof;
+    typedef std::vector<std::optional<std::byte>> SparseBuffer;
+
+    SparseBuffer _buf;       //!< Buffer to store unassembled substrings
+    ByteStream _output;      //!< The reassembled in-order byte stream
+    const size_t _capacity;  //!< The capacity of the buffer
+    size_t _unassembled;     //!< The number of unassembled bytes in the buffer
+    uint64_t _eof;           //!< Index of the end of the file.
+
+    void copy_to_buffer(const std::string &data, const size_t index);
+    void push_to_stream();
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
