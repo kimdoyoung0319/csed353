@@ -1,6 +1,8 @@
 #ifndef SPONGE_LIBSPONGE_BYTE_STREAM_HH
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
+#include "byte.hh"
+
 #include <deque>
 #include <string>
 
@@ -11,9 +13,7 @@
 //! and then no more bytes can be written.
 class ByteStream {
   private:
-    typedef uint8_t byte_t;
-
-    size_t _capacity;         //! Remaining capacity of the buffer.
+    size_t _remaining;        //! Remaining capacity of the buffer.
     size_t _written = 0;      //! Total number of bytes written so far.
     size_t _read = 0;         //! Total number of bytes read so far.
     std::deque<byte_t> _buf;  //! Buffer to store written bytes in.
@@ -22,7 +22,7 @@ class ByteStream {
 
   public:
     //! Construct a stream with room for `capacity` bytes.
-    ByteStream(const size_t capacity) : _capacity(capacity), _buf() {}
+    ByteStream(const size_t capacity) : _remaining(capacity), _buf() {}
 
     //! \name "Input" interface for the writer
     //!@{
@@ -33,7 +33,7 @@ class ByteStream {
     size_t write(const std::string &data);
 
     //! \returns the number of additional bytes that the stream has space for
-    size_t remaining_capacity() const { return _capacity; };
+    size_t remaining_capacity() const { return _remaining; };
 
     //! Signal that the byte stream has reached its ending
     void end_input() { _end = true; }

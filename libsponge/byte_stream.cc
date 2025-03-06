@@ -12,14 +12,15 @@ using namespace std;
 //! \returns the number of bytes that are actually written
 //! \throws runtime_error when the stream is already been closed
 size_t ByteStream::write(const string &data) {
-    if (_end)
+    if (_end) {
         throw runtime_error("stream input has already been ended");
+    }
 
     string::const_iterator it;
 
-    for (it = data.begin(); it != data.end() && _capacity > 0; it++) {
+    for (it = data.begin(); it != data.end() && _remaining > 0; it++) {
         _buf.push_back(*it);
-        _capacity--;
+        _remaining--;
         _written++;
     }
 
@@ -44,7 +45,7 @@ void ByteStream::pop_output(const size_t len) {
 
     for (size_t i = 0; i < len; i++) {
         _buf.pop_front();
-        _capacity++;
+        _remaining++;
         _read++;
     }
 }
