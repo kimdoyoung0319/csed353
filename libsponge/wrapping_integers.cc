@@ -1,23 +1,27 @@
 #include "wrapping_integers.hh"
 
-// Dummy implementation of a 32-bit wrapping integer
+// Implementation of a 32-bit wrapping integer
 
 // For Lab 2, please replace with a real implementation that passes the
 // automated checks run by `make check_lab2`.
 
 template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
+void DUMMY_CODE(Targs &&.../* unused */) {}
 
 using namespace std;
 
+const uint64_t mod = (1ul << 32);
+
+//! Calculates the distance of two unsigned numbers without
+static inline uint64_t dist(uint64_t a, uint64_t b) { return (a > b) ? (a - b) : (b - a); }
+
+//! \todo Refactor this.
 //! Transform an "absolute" 64-bit sequence number (zero-indexed) into a WrappingInt32
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
-WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
-    DUMMY_CODE(n, isn);
-    return WrappingInt32{0};
-}
+WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) { return isn + n; }
 
+//! \todo Refactor this to use static_cast and give appropriate comment.
 //! Transform a WrappingInt32 into an "absolute" 64-bit sequence number (zero-indexed)
 //! \param n The relative sequence number
 //! \param isn The initial sequence number
@@ -29,6 +33,11 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
-    DUMMY_CODE(n, isn, checkpoint);
-    return {};
+    int32_t offset = n - isn;
+    uint64_t base = checkpoint / mod * mod;
+
+    uint64_t lower = base + offset;
+    uint64_t upper = base + mod + offset;
+
+    return (dist(lower, checkpoint) > dist(upper, checkpoint)) ? upper : lower;
 }
