@@ -16,12 +16,14 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
     }
 
     if (!_isn.has_value()) {
-        throw runtime_error{"initial sequence number is not yet set"};
+        return;
     }
 
-    uint64_t index = unwrap(header.seqno, _isn.value(), _checkpoint);
+    uint64_t abs_seqno = unwrap(header.seqno, _isn.value(), _checkpoint);
+    uint64_t index = (header.syn) ? abs_seqno : (abs_seqno - 1);
+
     _reassembler.push_substring(payload.copy(), index, header.fin);
-    _checkpoint = index;
+    _checkpoint = abs_seqno;
 }
 
 optional<WrappingInt32> TCPReceiver::ackno() const {
@@ -31,7 +33,7 @@ optional<WrappingInt32> TCPReceiver::ackno() const {
 
     // The stream is closed when it consumes the conceptual FIN byte. Since this FIN takes
     // another sequence number, we should add 2 when the stream is closed.
-    WrappingInt32 ackno = _isn.value() + stream_out().bytes_read() + (stream_out().input_ended() ? 2 : 1);
+    WrappingInt32 ackno = _isn.value() + stream_out().bytes_written() + (stream_out().input_ended() ? 2 : 1);
     return optional{ackno};
 }
 
