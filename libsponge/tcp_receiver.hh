@@ -14,18 +14,6 @@
 //! the acknowledgment number and window size to advertise back to the
 //! remote TCPSender.
 class TCPReceiver {
-    //! Possible states of the receiver.
-    //! \todo Is this enum really needed?
-    enum State {
-        LISTEN,
-        SYN_RECV,
-        FIN_RECV,
-        ERROR,
-    };
-
-    //! Internal state.
-    State _state = LISTEN;
-
     //! Our data structure for re-assembling bytes.
     StreamReassembler _reassembler;
 
@@ -33,7 +21,7 @@ class TCPReceiver {
     size_t _capacity;
 
     //! The inital sequence number.
-    WrappingInt32 _isn;
+    std::optional<WrappingInt32> _isn;
 
     //! The sequence number of the last segment that has been received.
     uint64_t _checkpoint;
@@ -43,7 +31,7 @@ class TCPReceiver {
     //!
     //! \param capacity the maximum number of bytes that the receiver will
     //!                 store in its buffers at any give time.
-    TCPReceiver(const size_t capacity) : _reassembler(capacity), _capacity(capacity), _isn(0), _checkpoint(0) {}
+    TCPReceiver(const size_t capacity) : _reassembler(capacity), _capacity(capacity) {}
 
     //! \name Accessors to provide feedback to the remote TCPSender
     //!@{

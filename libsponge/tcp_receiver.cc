@@ -7,45 +7,32 @@
 
 using namespace std;
 
-//! \todo Refactor this.
 void TCPReceiver::segment_received(const TCPSegment &seg) {
-    bool syn = seg.header().syn;
-    bool fin = seg.header().fin;
-    WrappingInt32 seqno = seg.header().seqno;
-    string payload = seg.payload().copy();
+    const TCPHeader &header = seg.header();
+    const Buffer &payload = seg.payload();
 
-    if (_state == ERROR || _state == FIN_RECV) {
-        throw runtime_error("the receiver is in invalid state");
+    if (header.syn) {
+        _isn = optional{header.seqno};
     }
 
-    if (syn) {
-        _state = SYN_RECV;
-        _isn = seqno;
+    if (!_isn.has_value()) {
+        throw runtime_error{"initial sequence number is not yet set"};
     }
 
-    uint64_t abs_seqno = unwrap(seqno, _isn, _checkpoint) + syn;
-    _reassembler.push_substring(payload, abs_seqno - 1, fin);
-    _checkpoint = abs_seqno;
-
-    if (stream_out().input_ended()) {
-        _state = FIN_RECV;
-    }
+    uint64_t index = unwrap(header.seqno, _isn.value(), _checkpoint);
+    _reassembler.push_substring(payload.copy(), index, header.fin);
+    _checkpoint = index;
 }
 
 optional<WrappingInt32> TCPReceiver::ackno() const {
-    WrappingInt32 ackno = wrap(stream_out().bytes_written() + 1, _isn);
-
-    switch (_state) {
-        case SYN_RECV:
-            return optional(ackno);
-            break;
-        case FIN_RECV:
-            return optional(ackno + 1);
-            break;
-        default:
-            return nullopt;
-            break;
+    if (!_isn.has_value()) {
+        return nullopt;
     }
+
+    // The stream is closed when it consumes the conceptual FIN byte. Since this FIN takes
+    // another sequence number, we should add 2 when the stream is closed.
+    WrappingInt32 ackno = _isn.value() + stream_out().bytes_read() + (stream_out().input_ended() ? 2 : 1);
+    return optional{ackno};
 }
 
 size_t TCPReceiver::window_size() const {
