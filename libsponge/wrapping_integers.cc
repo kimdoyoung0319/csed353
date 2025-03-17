@@ -12,13 +12,11 @@ const uint64_t mod = (1ul << 32);
 //! Calculates the distance of two unsigned numbers without
 static inline uint64_t dist(uint64_t a, uint64_t b) { return (a > b) ? (a - b) : (b - a); }
 
-//! \todo Refactor this.
 //! Transform an "absolute" 64-bit sequence number (zero-indexed) into a WrappingInt32
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) { return isn + n; }
 
-//! \todo Refactor this to use static_cast and give appropriate comment.
 //! Transform a WrappingInt32 into an "absolute" 64-bit sequence number (zero-indexed)
 //! \param n The relative sequence number
 //! \param isn The initial sequence number
