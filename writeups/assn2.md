@@ -50,39 +50,40 @@ The function picks the candidate that has smaller distance toward the
 checkpoint.
 
 # Implementation of TCPReceiver
-The `TCPReceiver` now has two fields, namely `_isn` and `_checkpoint`. `_isn` is
-the ISN, which is initiallize as the RSN of the SYN segment. `_checkpoint` holds 
-the RSN of last received segment. This is used for index translation.
+The `TCPReceiver` now has two more fields, namely `_isn` and `_checkpoint`. 
+`_isn` is the ISN, which is initiallized as the RSN of the SYN segment. 
+`_checkpoint` holds the RSN of last received segment. It is used for index 
+translation.
 
 The `segment_received()` method initializes `_isn` if `seg` is the SYN segment,
-and translate the RSN into the index for output stream, stripping conceptual SYN
-and FIN bytes. It lastly pushes the payload into the reassembler with FIN flag,
-updating the ASN.
+and translate the RSN into an index for output stream, stripping conceptual SYN
+and FIN bytes. After translating the RSN to an index, It pushes the payload into 
+the reassembler with FIN flag.
 
 It just ignores the segment if it receives a segment that is not SYN before 
 receiving the SYN segment.
 
 Implementation Challenges:
-Translating a RSN into stream index was a biggest challenge for me. More 
-specifically, devising a working heuristic for setting checkpoint was hardest.
+Translating a RSN into stream index was the biggest challenge for me. More 
+specifically, devising a working heuristic for setting checkpoint was the 
+hardest challenge.
 
-There can be two possible option for checkpoint; one is the index of first
+There are two possible options for the checkpoint; one is the index of first
 unassembled byte, and the other is the RSN of last segment. The first option
 may cause problem since it may translate the RSN into stream index BEFORE the
 first unassembled byte - which will make the reassembler to ignore the payload.
 
-However, the second option, which is taken in current implementation may also 
+However, the second option, which is taken in current implementation, may also 
 cause a problem since after pushing multiple, non-prefix segments, the prefix 
-segment may be pushed with wrong index ((right index) + 2^32). I used the term
+segment may be pushed with wrong index (`(right index) + 2^32`). I used the term
 prefix segment and non-prefix segment to refer the segment that does not hold
 the first unassembled byte and vice versa.
 
-I took second option since there is no reasonable choice left for me. Also,
-I think the test suite does not examines this situation.
+I took second option since there is no reasonable choice left for me.
 
 Remaining Bugs:
-The bug mentioned above may happen when several non-prefix segments are 
-received.
+The bug mentioned above may happen when several non-prefix segments come into
+the TCPReceiver.
 
 - Optional: I had unexpected difficulty with: [describe]
 
