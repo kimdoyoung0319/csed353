@@ -7,6 +7,7 @@
 #include "wrapping_integers.hh"
 
 #include <functional>
+#include <optional>
 #include <queue>
 
 //! \brief The "sender" part of a TCP implementation.
@@ -17,20 +18,41 @@
 //! segments if the retransmission timer expires.
 class TCPSender {
   private:
-    //! our initial sequence number, the number for our SYN.
+    //! Our initial sequence number, the number for our SYN.
     WrappingInt32 _isn;
 
-    //! outbound queue of segments that the TCPSender wants sent
+    //! Outbound queue of segments that the TCPSender wants sent.
     std::queue<TCPSegment> _segments_out{};
 
-    //! retransmission timer for the connection
+    //! The queue of outstanding segments.
+    std::queue<TCPSegment> _outstanding_segments{};
+
+    //! Initial retransmission timer for the connection.
     unsigned int _initial_retransmission_timeout;
 
-    //! outgoing stream of bytes that have not yet been sent
+    //! Current retransmission timeout duration for the connection.
+    unsigned int _retransmission_timeout;
+
+    unsigned int _consecutive_restransmissions{0};
+
+    //! Time passed since the construction of this TCPSender.
+    uint64_t _current_time_in_ms{0};
+
+    //! The alarm set currently.
+    std::optional<uint64_t> _alarm{};
+
+    //! Outgoing stream of bytes that have not yet been sent.
     ByteStream _stream;
 
-    //! the (absolute) sequence number for the next byte to be sent
+    //! The (absolute) sequence number for the next byte to be sent.
     uint64_t _next_seqno{0};
+
+    //! The acknowledge number of the segment that has been lastly received.
+    uint64_t _ackno{0};
+
+    //! The window size of the receiver.
+    //! \todo Maybe this initial value is wrong...
+    uint16_t _window_size{UINT16_MAX};
 
   public:
     //! Initialize a TCPSender
@@ -45,7 +67,7 @@ class TCPSender {
     //!@}
 
     //! \name Methods that can cause the TCPSender to send a segment
-    //!@{
+    //!@_{
 
     //! \brief A new acknowledgment was received
     void ack_received(const WrappingInt32 ackno, const uint16_t window_size);
@@ -69,7 +91,7 @@ class TCPSender {
     size_t bytes_in_flight() const;
 
     //! \brief Number of consecutive retransmissions that have occurred in a row
-    unsigned int consecutive_retransmissions() const;
+    unsigned int consecutive_retransmissions() const { return _consecutive_restransmissions; };
 
     //! \brief TCPSegments that the TCPSender has enqueued for transmission.
     //! \note These must be dequeued and sent by the TCPConnection,

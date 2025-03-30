@@ -2,9 +2,6 @@
 
 // Implementation of a TCP receiver
 
-// For Lab 2, please replace with a real implementation that passes the
-// automated checks run by `make check_lab2`.
-
 using namespace std;
 
 void TCPReceiver::segment_received(const TCPSegment &seg) {

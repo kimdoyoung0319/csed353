@@ -2,14 +2,11 @@
 
 // Implementation of a 32-bit wrapping integer
 
-// For Lab 2, please replace with a real implementation that passes the
-// automated checks run by `make check_lab2`.
-
 using namespace std;
 
 const uint64_t mod = (1ul << 32);
 
-//! Calculates the distance of two unsigned numbers without
+//! Calculates the distance of two unsigned numbers 
 static inline uint64_t dist(uint64_t a, uint64_t b) { return (a > b) ? (a - b) : (b - a); }
 
 //! Transform an "absolute" 64-bit sequence number (zero-indexed) into a WrappingInt32
