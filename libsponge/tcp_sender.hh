@@ -1,3 +1,4 @@
+//! \todo Revise comments.
 #ifndef SPONGE_LIBSPONGE_TCP_SENDER_HH
 #define SPONGE_LIBSPONGE_TCP_SENDER_HH
 
@@ -24,35 +25,35 @@ class TCPSender {
     //! Outbound queue of segments that the TCPSender wants sent.
     std::queue<TCPSegment> _segments_out{};
 
-    //! The queue of outstanding segments.
-    std::queue<TCPSegment> _outstanding_segments{};
+    //! Queue of segments that has not been acknowledged.
+    std::queue<TCPSegment> _outstanding{};
 
-    //! Initial retransmission timer for the connection.
+    //! retransmission timer for the connection
     unsigned int _initial_retransmission_timeout;
 
-    //! Current retransmission timeout duration for the connection.
-    unsigned int _retransmission_timeout;
+    //! The number of consecutive retransmissions done so far.
+    unsigned int _consecutive_retransmissions{0};
 
-    unsigned int _consecutive_restransmissions{0};
+    //! Remaining window size advertised by the receiver.
+    size_t _remaining_window_size{1};
 
-    //! Time passed since the construction of this TCPSender.
-    uint64_t _current_time_in_ms{0};
+    //! Is the window size advertised by the receiver is 0?
+    bool _is_window_size_zero{false};
 
-    //! The alarm set currently.
-    std::optional<uint64_t> _alarm{};
-
-    //! Outgoing stream of bytes that have not yet been sent.
+    //! outgoing stream of bytes that have not yet been sent
     ByteStream _stream;
 
-    //! The (absolute) sequence number for the next byte to be sent.
+    //! The absolute sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
-    //! The acknowledge number of the segment that has been lastly received.
+    //! The absolute acknowledge number sent from the receiver.
     uint64_t _ackno{0};
 
-    //! The window size of the receiver.
-    //! \todo Maybe this initial value is wrong...
-    uint16_t _window_size{UINT16_MAX};
+    //! Remaining value of the timer. nullopt when the timer is not set.
+    std::optional<size_t> _timer_remaining = std::nullopt;
+
+    //! \returns the current retransmission timeout.
+    unsigned int retransmission_timeout() const;
 
   public:
     //! Initialize a TCPSender
@@ -91,7 +92,7 @@ class TCPSender {
     size_t bytes_in_flight() const;
 
     //! \brief Number of consecutive retransmissions that have occurred in a row
-    unsigned int consecutive_retransmissions() const { return _consecutive_restransmissions; };
+    unsigned int consecutive_retransmissions() const { return _consecutive_retransmissions; };
 
     //! \brief TCPSegments that the TCPSender has enqueued for transmission.
     //! \note These must be dequeued and sent by the TCPConnection,

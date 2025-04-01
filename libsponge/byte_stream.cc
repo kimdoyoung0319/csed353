@@ -32,20 +32,17 @@ size_t ByteStream::write(const string &data) {
 //! \returns the contents of the stream of the length len
 string ByteStream::peek_output(const size_t len) const {
     string result;
-    size_t length_to_peek = min(len, _buf.size());
+    size_t to_peek = min(len, _buf.size());
 
-    transform(_buf.begin(), _buf.begin() + length_to_peek, back_inserter(result), [](byte ch) {
-        return static_cast<char>(ch);
-    });
-
+    transform(_buf.begin(), _buf.begin() + to_peek, back_inserter(result), [](byte x) { return to_integer<char>(x); });
     return result;
 }
 
 //! \param[in] len bytes will be removed from the output side of the buffer
 void ByteStream::pop_output(const size_t len) {
-    size_t length_to_pop = min(len, _buf.size());
+    size_t to_pop = min(len, _buf.size());
 
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < to_pop; i++) {
         _buf.pop_front();
         _remaining++;
         _read++;
