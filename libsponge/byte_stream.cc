@@ -4,9 +4,6 @@
 #include <iterator>
 #include <stdexcept>
 
-template <typename... Targs>
-void DUMMY_CODE(Targs &&.../* unused */) {}
-
 using namespace std;
 
 //! \param[in] data is data to write on the stream
@@ -34,7 +31,8 @@ string ByteStream::peek_output(const size_t len) const {
     string result;
     size_t to_peek = min(len, _buf.size());
 
-    transform(_buf.begin(), _buf.begin() + to_peek, back_inserter(result), [](byte x) { return to_integer<char>(x); });
+    transform(
+        _buf.begin(), _buf.begin() + to_peek, back_inserter(result), [](byte ch) { return to_integer<char>(ch); });
     return result;
 }
 
