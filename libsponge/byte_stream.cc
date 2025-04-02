@@ -4,9 +4,6 @@
 #include <iterator>
 #include <stdexcept>
 
-template <typename... Targs>
-void DUMMY_CODE(Targs &&.../* unused */) {}
-
 using namespace std;
 
 //! \param[in] data is data to write on the stream
@@ -32,22 +29,18 @@ size_t ByteStream::write(const string &data) {
 //! \returns the contents of the stream of the length len
 string ByteStream::peek_output(const size_t len) const {
     string result;
+    size_t to_peek = min(len, _buf.size());
 
-    if (len > _buf.size()) {
-        throw runtime_error("invalid peek length:" + to_string(len));
-    }
-
-    transform(_buf.begin(), _buf.end(), back_inserter(result), [](byte x) { return to_integer<char>(x); });
+    transform(
+        _buf.begin(), _buf.begin() + to_peek, back_inserter(result), [](byte ch) { return to_integer<char>(ch); });
     return result;
 }
 
 //! \param[in] len bytes will be removed from the output side of the buffer
 void ByteStream::pop_output(const size_t len) {
-    if (len > _buf.size()) {
-        throw runtime_error("invalid peek length:" + to_string(len));
-    }
+    size_t to_pop = min(len, _buf.size());
 
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < to_pop; i++) {
         _buf.pop_front();
         _remaining++;
         _read++;
