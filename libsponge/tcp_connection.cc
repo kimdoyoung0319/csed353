@@ -11,17 +11,17 @@ void TCPConnection::send_rst_segment() {
         _sender.send_empty_segment();
     }
 
-    TCPSegment &seg = _sender.segments_out().front();
+    TCPSegment seg = move(_sender.segments_out().front());
     _sender.segments_out().pop();
 
     seg.header().rst = true;
 
-    _segments_out.push(seg);
+    _segments_out.push(move(seg));
 }
 
 void TCPConnection::send_segments() {
     while (!_sender.segments_out().empty()) {
-        TCPSegment &seg = _sender.segments_out().front();
+        TCPSegment seg = move(_sender.segments_out().front());
         TCPHeader &header = seg.header();
         _sender.segments_out().pop();
 
@@ -32,7 +32,7 @@ void TCPConnection::send_segments() {
 
         header.win = _receiver.window_size();
 
-        _segments_out.push(seg);
+        _segments_out.push(move(seg));
     }
 }
 
