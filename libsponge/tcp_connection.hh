@@ -1,3 +1,4 @@
+//! \todo Change function and variable name.
 #ifndef SPONGE_LIBSPONGE_TCP_FACTORED_HH
 #define SPONGE_LIBSPONGE_TCP_FACTORED_HH
 
@@ -6,66 +7,86 @@
 #include "tcp_sender.hh"
 #include "tcp_state.hh"
 
-//! \brief A complete endpoint of a TCP connection
+#include <optional>
+
+//! \brief A complete endpoint of a TCP connection.
 class TCPConnection {
   private:
     TCPConfig _cfg;
     TCPReceiver _receiver{_cfg.recv_capacity};
     TCPSender _sender{_cfg.send_capacity, _cfg.rt_timeout, _cfg.fixed_isn};
 
-    //! outbound queue of segments that the TCPConnection wants sent
+    //! Outbound queue of segments that the TCPConnection wants sent.
     std::queue<TCPSegment> _segments_out{};
+
+    //! The time elapsed since it received the last segment.
+    size_t _time_since_last_segment_received{0};
+
+    //! Is the connection active? i.e. Is this connected or lingering?
+    bool _active{true};
 
     //! Should the TCPConnection stay active (and keep ACKing)
     //! for 10 * _cfg.rt_timeout milliseconds after both streams have ended,
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    //! Remaining value of the lingering timer. nullopt if the timer is not set.
+    std::optional<size_t> _linger_timer{std::nullopt};
+
+    //! \brief Send a RST segment, forcing the sender to make empty segment if the output queue of sender is empty.
+    void send_rst_segment();
+
+    //! \brief Send segments that were pushed into the output queue of the sender.
+    void send_segments();
+
+    //! \brief Check if the connection is done or needs lingering, and set the active flag to false if the connection is done.
+    void check_activeness();
+
   public:
-    //! \name "Input" interface for the writer
+    //! \name "Input" interface for the writer.
     //!@{
 
-    //! \brief Initiate a connection by sending a SYN segment
+    //! \brief Initiate a connection by sending a SYN segment.
     void connect();
 
-    //! \brief Write data to the outbound byte stream, and send it over TCP if possible
+    //! \brief Write data to the outbound byte stream, and send it over TCP if possible.
     //! \returns the number of bytes from `data` that were actually written.
     size_t write(const std::string &data);
 
     //! \returns the number of `bytes` that can be written right now.
     size_t remaining_outbound_capacity() const;
 
-    //! \brief Shut down the outbound byte stream (still allows reading incoming data)
+    //! \brief Shut down the outbound byte stream (still allows reading incoming data).
     void end_input_stream();
     //!@}
 
-    //! \name "Output" interface for the reader
+    //! \name "Output" interface for the reader.
     //!@{
 
-    //! \brief The inbound byte stream received from the peer
+    //! \brief The inbound byte stream received from the peer.
     ByteStream &inbound_stream() { return _receiver.stream_out(); }
     //!@}
 
-    //! \name Accessors used for testing
+    //! \name Accessors used for testing.
 
     //!@{
-    //! \brief number of bytes sent and not yet acknowledged, counting SYN/FIN each as one byte
+    //! \brief number of bytes sent and not yet acknowledged, counting SYN/FIN each as one byte.
     size_t bytes_in_flight() const;
-    //! \brief number of bytes not yet reassembled
+    //! \brief number of bytes not yet reassembled.
     size_t unassembled_bytes() const;
-    //! \brief Number of milliseconds since the last segment was received
+    //! \brief Number of milliseconds since the last segment was received.
     size_t time_since_last_segment_received() const;
-    //!< \brief summarize the state of the sender, receiver, and the connection
+    //!< \brief summarize the state of the sender, receiver, and the connection.
     TCPState state() const { return {_sender, _receiver, active(), _linger_after_streams_finish}; };
     //!@}
 
-    //! \name Methods for the owner or operating system to call
+    //! \name Methods for the owner or operating system to call.
     //!@{
 
-    //! Called when a new segment has been received from the network
+    //! Called when a new segment has been received from the network.
     void segment_received(const TCPSegment &seg);
 
-    //! Called periodically when time elapses
+    //! Called periodically when time elapses.
     void tick(const size_t ms_since_last_tick);
 
     //! \brief TCPSegments that the TCPConnection has enqueued for transmission.
@@ -76,18 +97,18 @@ class TCPConnection {
 
     //! \brief Is the connection still alive in any way?
     //! \returns `true` if either stream is still running or if the TCPConnection is lingering
-    //! after both streams have finished (e.g. to ACK retransmissions from the peer)
+    //! after both streams have finished. (e.g. to ACK retransmissions from the peer)
     bool active() const;
     //!@}
 
-    //! Construct a new connection from a configuration
+    //! Construct a new connection from a configuration.
     explicit TCPConnection(const TCPConfig &cfg) : _cfg{cfg} {}
 
-    //! \name construction and destruction
-    //! moving is allowed; copying is disallowed; default construction not possible
+    //! \name construction and destruction.
+    //! moving is allowed; copying is disallowed; default construction not possible.
 
     //!@{
-    ~TCPConnection();  //!< destructor sends a RST if the connection is still open
+    ~TCPConnection();  //!< destructor sends a RST if the connection is still open.
     TCPConnection() = delete;
     TCPConnection(TCPConnection &&other) = default;
     TCPConnection &operator=(TCPConnection &&other) = default;
