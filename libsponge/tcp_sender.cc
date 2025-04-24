@@ -125,5 +125,12 @@ void TCPSender::send_empty_segment() {
     seg.header().fin = is_fin();
 
     _next_seqno += seg.length_in_sequence_space();
+
     _segments_out.push(seg);
+
+    // An ACK segment for a SYN segment must be retransmitted if lost.
+    if (seg.header().syn) {
+        _timer_remaining = retransmission_timeout();
+        _outstanding.push(seg);
+    }
 }
