@@ -1,4 +1,4 @@
-#include "socket.hh"
+#include "tcp_sponge_socket.hh"
 #include "util.hh"
 
 #include <cstdlib>
@@ -8,7 +8,7 @@ using namespace std;
 
 //! Connects to the specified path of the host, shows the output into stdout.
 void get_URL(const string &host, const string &path) {
-    TCPSocket socket;
+    CS144TCPSocket socket;
     Address addr(host, "http");
 
     socket.connect(addr);
@@ -21,6 +21,7 @@ void get_URL(const string &host, const string &path) {
         cout << socket.read();
 
     socket.shutdown(SHUT_RDWR);
+    socket.wait_until_closed();
 }
 
 int main(int argc, char *argv[]) {
