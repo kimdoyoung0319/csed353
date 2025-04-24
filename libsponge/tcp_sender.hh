@@ -48,7 +48,7 @@ class TCPSender {
     uint64_t _ackno{0};
 
     //! Remaining value of the timer. nullopt when the timer is not set.
-    std::optional<size_t> _timer_remaining = std::nullopt;
+    std::optional<size_t> _timer_remaining{std::nullopt};
 
     //! Was the window size advertised by the receiver initially zero?
     bool _is_initial_window_size_zero{false};
