@@ -26,7 +26,8 @@ inline size_t TCPSender::remaining_window_size() const {
 inline bool TCPSender::is_syn() const { return _next_seqno == 0; }
 
 inline bool TCPSender::is_fin() const {
-    return _stream.input_ended() && (_stream.buffer_size() < remaining_window_size());
+    return _stream.input_ended() && (_stream.buffer_size() < remaining_window_size()) &&
+           (_stream.buffer_size() <= TCPConfig::MAX_PAYLOAD_SIZE) && !has_fin_sent();
 }
 
 inline bool TCPSender::is_transmission_empty() const { return !is_syn() && !_stream.eof() && _stream.buffer_empty(); }
@@ -40,7 +41,7 @@ void TCPSender::fill_window() {
         size_t payload_size = min(remaining_window_size(), TCPConfig::MAX_PAYLOAD_SIZE);
 
         TCPSegment seg;
-        seg.header().seqno = wrap(_next_seqno, _isn);
+        seg.header().seqno = next_seqno();
         seg.header().syn = is_syn();
         seg.header().fin = is_fin();
 
@@ -119,7 +120,7 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
 
 void TCPSender::send_empty_segment() {
     TCPSegment seg;
-    seg.header().seqno = wrap(_next_seqno, _isn);
+    seg.header().seqno = next_seqno();
     seg.header().syn = is_syn();
     seg.header().fin = is_fin();
 
