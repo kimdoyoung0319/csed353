@@ -1,4 +1,3 @@
-//! \todo Change function and variable name.
 #ifndef SPONGE_LIBSPONGE_TCP_FACTORED_HH
 #define SPONGE_LIBSPONGE_TCP_FACTORED_HH
 

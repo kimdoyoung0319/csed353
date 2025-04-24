@@ -1,4 +1,3 @@
-//! \todo Make the methods that is associated with the activeness of the connection to check_activeness() method.
 #include "tcp_connection.hh"
 
 #include <iostream>
@@ -15,7 +14,6 @@ void TCPConnection::send_rst_segment() {
     TCPSegment &seg = _sender.segments_out().front();
     _sender.segments_out().pop();
 
-    //! \todo Should we set ackno and some other fields in the header here?
     seg.header().rst = true;
 
     _segments_out.push(seg);
@@ -110,7 +108,6 @@ size_t TCPConnection::write(const string &data) {
     return written;
 }
 
-//! \todo Update the time since last segment according to the passage of the time.
 //! \param[in] ms_since_last_tick number of milliseconds since the last call to this method
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);

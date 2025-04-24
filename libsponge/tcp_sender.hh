@@ -1,4 +1,3 @@
-//! \todo Revise comments.
 #ifndef SPONGE_LIBSPONGE_TCP_SENDER_HH
 #define SPONGE_LIBSPONGE_TCP_SENDER_HH
 
