@@ -11,6 +11,15 @@
 
 using namespace std;
 
+//! \param[in] addr the address to compute hash value
+//! \returns the computed hash value
+size_t Address::Hash::operator()(const Address &addr) const noexcept {
+    size_t h1 = addr.ipv4_numeric();
+    size_t h2 = addr.port();
+
+    return h1 ^ (h2 << 1);
+}
+
 //! Converts Raw to `sockaddr *`.
 Address::Raw::operator sockaddr *() { return reinterpret_cast<sockaddr *>(&storage); }
 

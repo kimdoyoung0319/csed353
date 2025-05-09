@@ -21,6 +21,11 @@ class Address {
         operator const sockaddr *() const;
     };
 
+    //! \brief Hash function object for the Address class.
+    struct Hash {
+        std::size_t operator()(const Address &addr) const noexcept;
+    };
+
   private:
     socklen_t _size;  //!< Size of the wrapped address.
     Raw _address{};   //!< A wrapped [sockaddr_storage](@ref man7::socket) containing the address.
