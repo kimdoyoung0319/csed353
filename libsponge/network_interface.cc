@@ -81,6 +81,8 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 //! \param[in] next_hop the IP address of the interface to send it to (typically a router or default gateway, but may also be another host if directly connected to the same network as the destination)
 //! (Note: the Address type can be converted to a uint32_t (raw 32-bit IP address) with the Address::ipv4_numeric() method.)
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop) {
+    // The Ethernet address associated with next_hop is not found. Send an ARP request message and push the datagram to
+    // the outstanding queue.
     if (_mappings.find(next_hop) == _mappings.end()) {
         EthernetFrame frame = make_arp_request_frame(next_hop);
 
@@ -91,6 +93,8 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         return;
     }
 
+    // The entry is in pending state. Push the datagram to outstanding queue and send an ARP request again if the
+    // entry's retransmission timeout is over.
     if (_mappings[next_hop].state == MappingEntry::PENDING) {
         if (_mappings[next_hop].expire_at < _uptime) {
             EthernetFrame frame = make_arp_request_frame(next_hop);
@@ -103,6 +107,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         return;
     }
 
+    // The mapping from next_hop to its Ethernet address is fully known. Send the datagram to the peer.
     EthernetAddress addr = _mappings[next_hop].addr;
     EthernetFrame frame = make_datagram_frame(dgram, addr);
 
@@ -114,10 +119,12 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     const EthernetHeader &header = frame.header();
     const BufferList &payload = frame.payload();
 
+    // Ignore the frames that is not related to this interface.
     if (header.dst != ETHERNET_BROADCAST && header.dst != _ethernet_address) {
         return nullopt;
     }
 
+    // If the frame is an IPv4 frame, unwrap it and return it to the upper layer.
     if (header.type == EthernetHeader::TYPE_IPv4) {
         InternetDatagram dgram;
 
@@ -128,6 +135,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         return dgram;
     }
 
+    // The frame is possibly and ARP message frame. Parse it as ARP message and extracts the addresses.
     ARPMessage message;
 
     if (message.parse(Buffer(payload)) != ParseResult::NoError) {
@@ -137,6 +145,8 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     Address ip_addr = Address::from_ipv4_numeric(message.sender_ip_address);
     EthernetAddress ethernet_addr = message.sender_ethernet_address;
 
+    // Learn the mapping from sender IP address to sender ethernet address, and send outstanding datagrams for the IP
+    // address.
     _mappings[ip_addr] = MappingEntry(ethernet_addr, _uptime);
 
     if (_outstanding.find(ip_addr) != _outstanding.end()) {
@@ -149,6 +159,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         }
     }
 
+    // If the message is request message for this interface, send a reply message to the requester.
     if (message.opcode == ARPMessage::OPCODE_REQUEST && message.target_ip_address == _ip_address.ipv4_numeric()) {
         EthernetFrame reply = make_arp_reply_frame(ip_addr, ethernet_addr);
         _frames_out.push(reply);
@@ -161,6 +172,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 void NetworkInterface::tick(const size_t ms_since_last_tick) {
     _uptime += ms_since_last_tick;
 
+    // Remove mappings that are outdated or need to be retransmitted.
     for (auto it = _mappings.begin(); it != _mappings.end();) {
         MappingEntry &entry = it->second;
 
