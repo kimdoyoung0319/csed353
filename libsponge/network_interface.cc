@@ -9,9 +9,6 @@
 // Implementation of a network interface.
 // Translates from {IP datagram, next hop address} to link-layer frame, and from link-layer frame to IP datagram
 
-template <typename... Targs>
-void DUMMY_CODE(Targs &&.../* unused */) {}
-
 using namespace std;
 
 //! \param[in] addr IP address to request to peers.
@@ -152,7 +149,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         }
     }
 
-    if (message.opcode == ARPMessage::OPCODE_REQUEST) {
+    if (message.opcode == ARPMessage::OPCODE_REQUEST && message.target_ip_address == _ip_address.ipv4_numeric()) {
         EthernetFrame reply = make_arp_reply_frame(ip_addr, ethernet_addr);
         _frames_out.push(reply);
     }
