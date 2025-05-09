@@ -4,19 +4,73 @@
 #include "ethernet_frame.hh"
 
 #include <iostream>
+#include <stdexcept>
 
-// Dummy implementation of a network interface
+// Implementation of a network interface.
 // Translates from {IP datagram, next hop address} to link-layer frame, and from link-layer frame to IP datagram
 
-// For Lab 5, please replace with a real implementation that passes the
-// automated checks run by `make check_lab5`.
-
-// You will need to add private members to the class declaration in `network_interface.hh`
-
 template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
+void DUMMY_CODE(Targs &&.../* unused */) {}
 
 using namespace std;
+
+//! \param[in] addr IP address to request to peers.
+//! \returns an ARP request frame.
+EthernetFrame NetworkInterface::make_arp_request_frame(const Address &addr) {
+    EthernetFrame frame;
+
+    frame.header().type = EthernetHeader::TYPE_ARP;
+    frame.header().src = _ethernet_address;
+    frame.header().dst = ETHERNET_BROADCAST;
+
+    ARPMessage request;
+
+    request.opcode = ARPMessage::OPCODE_REQUEST;
+    request.sender_ethernet_address = _ethernet_address;
+    request.sender_ip_address = _ip_address.ipv4_numeric();
+    request.target_ip_address = addr.ipv4_numeric();
+
+    frame.payload() = request.serialize();
+
+    return frame;
+}
+
+//! \param[in] ip_addr IP address of the peer to response.
+//! \param[in] ethernet_addr Ethernet address of the peer to response.
+//! \returns an ARP reply frame.
+EthernetFrame NetworkInterface::make_arp_reply_frame(const Address &ip_addr, const EthernetAddress &ethernet_addr) {
+    EthernetFrame frame;
+
+    frame.header().type = EthernetHeader::TYPE_ARP;
+    frame.header().src = _ethernet_address;
+    frame.header().dst = ethernet_addr;
+
+    ARPMessage request;
+
+    request.opcode = ARPMessage::OPCODE_REPLY;
+    request.sender_ip_address = _ip_address.ipv4_numeric();
+    request.sender_ethernet_address = _ethernet_address;
+    request.target_ip_address = ip_addr.ipv4_numeric();
+    request.target_ethernet_address = ethernet_addr;
+
+    frame.payload() = request.serialize();
+
+    return frame;
+}
+
+//! \param[in] dgram the datagram to be stored in the Ethernet frame.
+//! \param[in] addr Ethernet address of the peer.
+//! \returns an datagram frame.
+EthernetFrame NetworkInterface::make_datagram_frame(const InternetDatagram &dgram, const EthernetAddress &addr) {
+    EthernetFrame frame;
+
+    frame.header().type = EthernetHeader::TYPE_IPv4;
+    frame.header().src = _ethernet_address;
+    frame.header().dst = addr;
+    frame.payload() = dgram.serialize();
+
+    return frame;
+}
 
 //! \param[in] ethernet_address Ethernet (what ARP calls "hardware") address of the interface
 //! \param[in] ip_address IP (what ARP calls "protocol") address of the interface
@@ -30,17 +84,93 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 //! \param[in] next_hop the IP address of the interface to send it to (typically a router or default gateway, but may also be another host if directly connected to the same network as the destination)
 //! (Note: the Address type can be converted to a uint32_t (raw 32-bit IP address) with the Address::ipv4_numeric() method.)
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop) {
-    // convert IP address of next hop to raw 32-bit representation (used in ARP header)
-    const uint32_t next_hop_ip = next_hop.ipv4_numeric();
+    if (_mappings.find(next_hop) == _mappings.end()) {
+        EthernetFrame frame = make_arp_request_frame(next_hop);
 
-    DUMMY_CODE(dgram, next_hop, next_hop_ip);
+        _mappings[next_hop] = MappingEntry{_uptime};
+        _frames_out.push(frame);
+        _outstanding[next_hop].push(dgram);
+
+        return;
+    }
+
+    if (_mappings[next_hop].state == MappingEntry::PENDING) {
+        if (_mappings[next_hop].expire_at < _uptime) {
+            EthernetFrame frame = make_arp_request_frame(next_hop);
+
+            _mappings[next_hop].expire_at = _uptime + ARP_REQUEST_TIMEOUT;
+            _frames_out.push(frame);
+        }
+
+        _outstanding[next_hop].push(dgram);
+        return;
+    }
+
+    EthernetAddress addr = _mappings[next_hop].addr;
+    EthernetFrame frame = make_datagram_frame(dgram, addr);
+
+    _frames_out.push(frame);
 }
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
-    DUMMY_CODE(frame);
-    return {};
+    const EthernetHeader &header = frame.header();
+    const BufferList &payload = frame.payload();
+
+    if (header.dst != ETHERNET_BROADCAST && header.dst != _ethernet_address) {
+        return nullopt;
+    }
+
+    if (header.type == EthernetHeader::TYPE_IPv4) {
+        InternetDatagram dgram;
+
+        if (dgram.parse(Buffer(payload)) != ParseResult::NoError) {
+            return nullopt;
+        }
+
+        return dgram;
+    }
+
+    ARPMessage message;
+
+    if (message.parse(Buffer(payload)) != ParseResult::NoError) {
+        return nullopt;
+    }
+
+    Address ip_addr = Address::from_ipv4_numeric(message.sender_ip_address);
+    EthernetAddress ethernet_addr = message.sender_ethernet_address;
+
+    _mappings[ip_addr] = MappingEntry(ethernet_addr, _uptime);
+
+    if (_outstanding.find(ip_addr) != _outstanding.end()) {
+        while (not _outstanding[ip_addr].empty()) {
+            InternetDatagram dgram = move(_outstanding[ip_addr].front());
+            EthernetFrame dgram_frame = make_datagram_frame(dgram, ethernet_addr);
+
+            _frames_out.push(dgram_frame);
+            _outstanding[ip_addr].pop();
+        }
+    }
+
+    if (message.opcode == ARPMessage::OPCODE_REQUEST) {
+        EthernetFrame reply = make_arp_reply_frame(ip_addr, ethernet_addr);
+        _frames_out.push(reply);
+    }
+
+    return nullopt;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void NetworkInterface::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void NetworkInterface::tick(const size_t ms_since_last_tick) {
+    _uptime += ms_since_last_tick;
+
+    for (auto it = _mappings.begin(); it != _mappings.end();) {
+        MappingEntry &entry = it->second;
+
+        if (entry.expire_at < _uptime) {
+            it = _mappings.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
