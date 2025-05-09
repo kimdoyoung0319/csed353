@@ -8,7 +8,7 @@ using namespace std;
 
 //! Connects to the specified path of the host, shows the output into stdout.
 void get_URL(const string &host, const string &path) {
-    CS144TCPSocket socket;
+    FullStackSocket socket;
     Address addr(host, "http");
 
     socket.connect(addr);
