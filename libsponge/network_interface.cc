@@ -135,7 +135,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         return dgram;
     }
 
-    // The frame is possibly and ARP message frame. Parse it as ARP message and extracts the addresses.
+    // The frame is possibly an ARP message frame. Parse it as an ARP message and extract the addresses.
     ARPMessage message;
 
     if (message.parse(Buffer(payload)) != ParseResult::NoError) {
