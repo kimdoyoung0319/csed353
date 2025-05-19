@@ -8,7 +8,7 @@
 #include <optional>
 
 //! \brief An abstraction for forwarding tables,
-//! implemented by a compressed trie. Provides lookup and
+//! implemented by a radix tree (trie). Provides lookup and
 //! update within O(n) time where n is the length of the
 //! address.
 class ForwardingTable {
