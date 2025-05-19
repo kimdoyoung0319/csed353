@@ -4,19 +4,11 @@
 
 using namespace std;
 
-// Dummy implementation of an IP router
+// Implementation of an IP router.
 
 // Given an incoming Internet datagram, the router decides
 // (1) which interface to send it out on, and
 // (2) what next hop address to send it to.
-
-// For Lab 6, please replace with a real implementation that passes the
-// automated checks run by `make check_lab6`.
-
-// You will need to add private members to the class declaration in `router.hh`
-
-template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
 
 //! \param[in] route_prefix The "up-to-32-bit" IPv4 address prefix to match the datagram's destination address against
 //! \param[in] prefix_length For this route to be applicable, how many high-order (most-significant) bits of the route_prefix will need to match the corresponding bits of the datagram's destination address?
@@ -29,14 +21,29 @@ void Router::add_route(const uint32_t route_prefix,
     cerr << "DEBUG: adding route " << Address::from_ipv4_numeric(route_prefix).ip() << "/" << int(prefix_length)
          << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)") << " on interface " << interface_num << "\n";
 
-    DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
-    // Your code here.
+    _forwarding_table.insert(route_prefix, prefix_length, next_hop, interface_num);
 }
 
-//! \param[in] dgram The datagram to be routed
+//! \param[in] dgram The datagram to be routed.
 void Router::route_one_datagram(InternetDatagram &dgram) {
-    DUMMY_CODE(dgram);
-    // Your code here.
+    IPv4Header &header = dgram.header();
+    auto entry = _forwarding_table.find(header.dst);
+
+    if (not entry.has_value() || header.ttl <= 1) {
+        return;
+    }
+
+    header.ttl--;
+
+    size_t interface_num = entry.value().interface_num;
+    optional<Address> next_hop = entry.value().next_hop;
+
+    if (not next_hop.has_value()) {
+        Address dst_addr = Address::from_ipv4_numeric(header.dst);
+        _interfaces[interface_num].send_datagram(dgram, dst_addr);
+    } else {
+        _interfaces[interface_num].send_datagram(dgram, next_hop.value());
+    }
 }
 
 void Router::route() {
