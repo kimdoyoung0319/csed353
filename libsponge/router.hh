@@ -1,6 +1,7 @@
 #ifndef SPONGE_LIBSPONGE_ROUTER_HH
 #define SPONGE_LIBSPONGE_ROUTER_HH
 
+#include "forwarding_table.hh"
 #include "network_interface.hh"
 
 #include <optional>
@@ -52,11 +53,7 @@ class Router {
     std::vector<AsyncNetworkInterface> _interfaces{};
 
     //! The router's forwarding table.
-    std::vector<TableEntry> _forwarding_table{};
-
-    std::optional<TableEntry> find_forwarding_table_entry(const uint32_t dest_addr) const;
-
-    inline uint32_t prefix(const uint32_t addr, const uint8_t length) const;
+    ForwardingTable _forwarding_table{};
 
     //! Send a single datagram from the appropriate outbound interface to the next hop,
     //! as specified by the route with the longest prefix_length that matches the
