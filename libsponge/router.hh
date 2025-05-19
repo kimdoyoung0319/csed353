@@ -20,7 +20,7 @@ class AsyncNetworkInterface : public NetworkInterface {
     //! Construct from a NetworkInterface
     AsyncNetworkInterface(NetworkInterface &&interface) : NetworkInterface(interface) {}
 
-    //! \brief Receives and Ethernet frame and responds appropriately.
+    //! \brief Receives an Ethernet frame and responds appropriately.
 
     //! - If type is IPv4, pushes to the `datagrams_out` queue for later retrieval by the owner.
     //! - If type is ARP request, learn a mapping from the "sender" fields, and send an ARP reply.
@@ -41,8 +41,22 @@ class AsyncNetworkInterface : public NetworkInterface {
 //! \brief A router that has multiple network interfaces and
 //! performs longest-prefix-match routing between them.
 class Router {
-    //! The router's collection of network interfaces
+    struct TableEntry {
+        uint32_t prefix;
+        uint8_t length;
+        std::optional<Address> next_hop;
+        size_t interface_num;
+    };
+
+    //! The router's collection of network interfaces.
     std::vector<AsyncNetworkInterface> _interfaces{};
+
+    //! The router's forwarding table.
+    std::vector<TableEntry> _forwarding_table{};
+
+    std::optional<TableEntry> find_forwarding_table_entry(const uint32_t dest_addr) const;
+
+    inline uint32_t prefix(const uint32_t addr, const uint8_t length) const;
 
     //! Send a single datagram from the appropriate outbound interface to the next hop,
     //! as specified by the route with the longest prefix_length that matches the
@@ -50,24 +64,24 @@ class Router {
     void route_one_datagram(InternetDatagram &dgram);
 
   public:
-    //! Add an interface to the router
-    //! \param[in] interface an already-constructed network interface
-    //! \returns The index of the interface after it has been added to the router
+    //! Add an interface to the router.
+    //! \param[in] interface an already-constructed network interface.
+    //! \returns The index of the interface after it has been added to the router.
     size_t add_interface(AsyncNetworkInterface &&interface) {
         _interfaces.push_back(std::move(interface));
         return _interfaces.size() - 1;
     }
 
-    //! Access an interface by index
+    //! Access an interface by index.
     AsyncNetworkInterface &interface(const size_t N) { return _interfaces.at(N); }
 
-    //! Add a route (a forwarding rule)
+    //! Add a route (a forwarding rule).
     void add_route(const uint32_t route_prefix,
                    const uint8_t prefix_length,
                    const std::optional<Address> next_hop,
                    const size_t interface_num);
 
-    //! Route packets between the interfaces
+    //! Route packets between the interfaces.
     void route();
 };
 
