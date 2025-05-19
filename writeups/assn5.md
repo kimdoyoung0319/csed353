@@ -71,7 +71,7 @@ resonable choices for such data structure. `std::map` or some linear data
 structure such as `std::list` or `std::vector` is also a possible candidate for
 this. The reason why I chose `std::unordered_map` over the other structures is
 because it provides O(1) time complexity for insertion/deletion/lookup while 
-`std::map` needs O(log n) time to do such operations. Contigous structures like 
+`std::map` needs O(log n) time to do such operations. Contiguous structures like 
 `std::vector` is not an ideal choice since the set of mappings is 'sparse'. In
 other words, there can be up to 2^32 * 2^16 unresolved mappings, which makes
 it nearly impossible and inefficient to implement this with such structures.
